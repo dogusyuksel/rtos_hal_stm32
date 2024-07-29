@@ -1,0 +1,15 @@
+[submodule "docker"]
+	path = docker
+	url = https://github.com/dogusyuksel/embedded_docker
+[submodule "thirdparty/cmsis-header-stm32"]
+	path = thirdparty/cmsis-header-stm32
+	url = https://github.com/modm-io/cmsis-header-stm32.git
+[submodule "thirdparty/CMSIS_5"]
+	path = thirdparty/CMSIS_5
+	url = https://github.com/ARM-software/CMSIS_5.git
+[submodule "thirdparty/FreeRTOS-Kernel"]
+	path = thirdparty/FreeRTOS-Kernel
+	url = https://github.com/FreeRTOS/FreeRTOS-Kernel.git
+[submodule "thirdparty/STM32L4XX_HAL"]
+	path = thirdparty/STM32L4XX_HAL
+	url = https://github.com/STMicroelectronics/stm32l4xx_hal_driver.git

@@ -1,0 +1,187 @@
+diff --git a/rtos/base_example/src/main.c b/rtos/base_example/src/main.c
+index 09b0f6c..5d92c27 100644
+--- a/rtos/base_example/src/main.c
++++ b/rtos/base_example/src/main.c
+@@ -1,7 +1,32 @@
+ #include "main.h"
++#include "FreeRTOS.h"
++#include "task.h"
++#include "queue.h"
++#include "semphr.h"
++#include <stdio.h>
++#include <string.h>
++#include <limits.h>
++#include <stdbool.h>
++
++/* Define the lengths of the queues that will be added to the queue set. */
++#define QUEUE_LENGTH_1		10
++#define QUEUE_LENGTH_2		10
++
++/* Binary semaphores have an effective length of 1. */
++#define BINARY_SEMAPHORE_LENGTH	1
++
++/* Define the size of the item to be held by queue 1 and queue 2 respectively.
++The values used here are just for demonstration purposes. */
++#define ITEM_SIZE_QUEUE_1	sizeof( uint32_t )
++#define ITEM_SIZE_QUEUE_2	sizeof( uint8_t )
++
++/* The combined length of the two queues and binary semaphore that will be
++added to the queue set. */
++#define COMBINED_LENGTH ( QUEUE_LENGTH_1 + \
++                          QUEUE_LENGTH_2 + \
++                          BINARY_SEMAPHORE_LENGTH )
+ 
+ UART_HandleTypeDef hlpuart1;
+-
+ PCD_HandleTypeDef hpcd_USB_OTG_FS;
+ 
+ void SystemClock_Config(void);
+@@ -9,6 +34,126 @@ static void MX_GPIO_Init(void);
+ static void MX_LPUART1_UART_Init(void);
+ static void MX_USB_OTG_FS_PCD_Init(void);
+ 
++static uint32_t counter = 0;
++static TaskHandle_t xHandlingTask = NULL;
++QueueHandle_t xQueue1, xQueue2, xSemaphore;
++
++void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
++    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
++    UBaseType_t uxSavedInterruptStatus;
++
++    if (GPIO_Pin == B1_Pin) {
++        uxSavedInterruptStatus = taskENTER_CRITICAL_FROM_ISR();
++        HAL_UART_Transmit(&hlpuart1, (uint8_t *)"pressed\n\0", 9, 100);
++        taskEXIT_CRITICAL_FROM_ISR( uxSavedInterruptStatus );
++
++        if (counter % 3 == 0) {
++            if (xQueueSendToBackFromISR(xQueue1, &counter, NULL) != pdPASS) {
++                uxSavedInterruptStatus = taskENTER_CRITICAL_FROM_ISR();
++                HAL_UART_Transmit(&hlpuart1, (uint8_t *)"err\n\0", 5, 100);
++                taskEXIT_CRITICAL_FROM_ISR( uxSavedInterruptStatus );
++            }
++        } else if (counter % 3 == 1) {
++            if (xQueueSendToBackFromISR(xQueue2, &counter, NULL) != pdPASS) {
++                uxSavedInterruptStatus = taskENTER_CRITICAL_FROM_ISR();
++                HAL_UART_Transmit(&hlpuart1, (uint8_t *)"err\n\0", 5, 100);
++                taskEXIT_CRITICAL_FROM_ISR( uxSavedInterruptStatus );
++            }
++        } else if (counter % 3 == 2) {
++            xHigherPriorityTaskWoken = pdFALSE;
++            if( xSemaphoreGiveFromISR( xSemaphore, &xHigherPriorityTaskWoken ) != pdTRUE ) {
++                // We would expect this call to fail because we cannot give
++                // a semaphore without first "taking" it!
++                uxSavedInterruptStatus = taskENTER_CRITICAL_FROM_ISR();
++                HAL_UART_Transmit(&hlpuart1, (uint8_t *)"err\n\0", 5, 100);
++                taskEXIT_CRITICAL_FROM_ISR( uxSavedInterruptStatus );
++            }
++        }
++        counter++;
++    }
++}
++
++static void prvHandlingTask( void *pvParameter ) {
++    (void)pvParameter;
++
++    static QueueSetHandle_t xQueueSet;
++    QueueSetMemberHandle_t xActivatedMember;
++    uint32_t xReceivedFromQueue1;
++    uint8_t xReceivedFromQueue2;
++    char buffer[256] = {0};
++
++    /* Create the queue set large enough to hold an event for every space in
++    every queue and semaphore that is to be added to the set. */
++    xQueueSet = xQueueCreateSet( COMBINED_LENGTH );
++
++    /* Create the queues and semaphores that will be contained in the set. */
++    xQueue1 = xQueueCreate( QUEUE_LENGTH_1, ITEM_SIZE_QUEUE_1 );
++    xQueue2 = xQueueCreate( QUEUE_LENGTH_2, ITEM_SIZE_QUEUE_2 );
++
++    /* Create the semaphore that is being added to the set. */
++    xSemaphore = xSemaphoreCreateBinary();
++
++    /* Check everything was created. */
++    configASSERT( xQueueSet );
++    configASSERT( xQueue1 );
++    configASSERT( xQueue2 );
++    configASSERT( xSemaphore );
++
++    /* Add the queues and semaphores to the set.  Reading from these queues and
++    semaphore can only be performed after a call to xQueueSelectFromSet() has
++    returned the queue or semaphore handle from this point on. */
++    xQueueAddToSet( xQueue1, xQueueSet );
++    xQueueAddToSet( xQueue2, xQueueSet );
++    xQueueAddToSet( xSemaphore, xQueueSet );
++
++    for( ;; )
++    {
++        /* Block to wait for something to be available from the queues or
++        semaphore that have been added to the set.  Don't block longer than
++        1000ms. */
++        xActivatedMember = xQueueSelectFromSet( xQueueSet,
++                                                1000 / portTICK_PERIOD_MS );
++
++        /* Which set member was selected?  Receives/takes can use a block time
++        of zero as they are guaranteed to pass because xQueueSelectFromSet()
++        would not have returned the handle unless something was available. */
++        if( xActivatedMember == xQueue1 )
++        {
++            xQueueReceive( xActivatedMember, &xReceivedFromQueue1, 0 );
++            snprintf(buffer, sizeof(buffer), "Q1 data %ld\n", xReceivedFromQueue1);
++            taskENTER_CRITICAL();
++            HAL_UART_Transmit(&hlpuart1, (uint8_t *)buffer, strlen(buffer), 100);
++            taskEXIT_CRITICAL();
++        }
++        else if( xActivatedMember == xQueue2 )
++        {
++            xQueueReceive( xActivatedMember, &xReceivedFromQueue2, 0 );
++            snprintf(buffer, sizeof(buffer), "Q2 data %x\n", xReceivedFromQueue2);
++            taskENTER_CRITICAL();
++            HAL_UART_Transmit(&hlpuart1, (uint8_t *)buffer, strlen(buffer), 100);
++            taskEXIT_CRITICAL();
++        }
++        else if( xActivatedMember == xSemaphore )
++        {
++            /* Take the semaphore to make sure it can be "given" again. */
++            xSemaphoreTake( xActivatedMember, 0 );
++            snprintf(buffer, sizeof(buffer), "semaphore came\n");
++            taskENTER_CRITICAL();
++            HAL_UART_Transmit(&hlpuart1, (uint8_t *)buffer, strlen(buffer), 100);
++            taskEXIT_CRITICAL();
++        }
++        else
++        {
++            /* The 100ms block time expired without an RTOS queue or semaphore
++            being ready to process. */
++            snprintf(buffer, sizeof(buffer), "timeout\n");
++            taskENTER_CRITICAL();
++            HAL_UART_Transmit(&hlpuart1, (uint8_t *)buffer, strlen(buffer), 100);
++            taskEXIT_CRITICAL();
++        }
++    }
++}
++
+ int main(void) {
+ 
+     HAL_Init();
+@@ -19,6 +164,11 @@ int main(void) {
+     MX_LPUART1_UART_Init();
+     MX_USB_OTG_FS_PCD_Init();
+ 
++    NVIC_SetPriorityGrouping( 0 );
++
++    xTaskCreate(prvHandlingTask, "prvHandlingTask", 2048, NULL, tskIDLE_PRIORITY, &xHandlingTask); //snprintf uses huge stack
++    vTaskStartScheduler();
++
+     while (1) {
+     }
+ }
+@@ -132,7 +282,8 @@ static void MX_GPIO_Init(void) {
+     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+     HAL_GPIO_Init(USB_PowerSwitchOn_GPIO_Port, &GPIO_InitStruct);
+ 
+-    HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
++    HAL_NVIC_SetPriority(EXTI15_10_IRQn, configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 1, configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 1);
++    NVIC_SetPriority(EXTI15_10_IRQn, configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 1);
+     HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
+ }
+ 

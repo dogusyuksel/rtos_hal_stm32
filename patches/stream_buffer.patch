@@ -1,0 +1,139 @@
+diff --git a/rtos/base_example/src/main.c b/rtos/base_example/src/main.c
+index 09b0f6c..e36ccc5 100644
+--- a/rtos/base_example/src/main.c
++++ b/rtos/base_example/src/main.c
+@@ -1,14 +1,93 @@
+ #include "main.h"
++#include "FreeRTOS.h"
++#include "task.h"
++#include "stream_buffer.h"
++#include <stdio.h>
++#include <string.h>
++#include <limits.h>
++#include <stdbool.h>
+ 
+ UART_HandleTypeDef hlpuart1;
+-
+ PCD_HandleTypeDef hpcd_USB_OTG_FS;
+ 
++char ch = 0;
++
+ void SystemClock_Config(void);
+ static void MX_GPIO_Init(void);
+ static void MX_LPUART1_UART_Init(void);
+ static void MX_USB_OTG_FS_PCD_Init(void);
+ 
++static TaskHandle_t xHandlingTask = NULL;
++StreamBufferHandle_t xStreamBuffer;
++
++void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
++    if (huart == &hlpuart1) {
++        HAL_UART_Receive_IT(&hlpuart1, (uint8_t *)&ch, 1);
++
++        size_t xBytesSent;
++        BaseType_t xHigherPriorityTaskWoken = pdFALSE; /* Initialised to pdFALSE. */
++
++            /* Attempt to send the string to the stream buffer. */
++            xBytesSent = xStreamBufferSendFromISR( xStreamBuffer,
++                                                ( void * ) &ch,
++                                                1,
++                                                &xHigherPriorityTaskWoken );
++
++            if( xBytesSent != 1 )
++            {
++                /* There was not enough free space in the stream buffer for the entire
++                string to be written, ut xBytesSent bytes were written. */
++            }
++
++            /* If xHigherPriorityTaskWoken was set to pdTRUE inside
++            xStreamBufferSendFromISR() then a task that has a priority above the
++            priority of the currently executing task was unblocked and a context
++            switch should be performed to ensure the ISR returns to the unblocked
++            task.  In most FreeRTOS ports this is done by simply passing
++            xHigherPriorityTaskWoken into taskYIELD_FROM_ISR(), which will test the
++            variables value, and perform the context switch if necessary.  Check the
++            documentation for the port in use for port specific instructions. */
++            portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
++    }
++}
++
++void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
++    UBaseType_t uxSavedInterruptStatus;
++
++    if (GPIO_Pin == B1_Pin) {
++        uxSavedInterruptStatus = taskENTER_CRITICAL_FROM_ISR();
++        HAL_UART_Transmit(&hlpuart1, (uint8_t *)"pressed\n\0", 9, 100);
++        taskEXIT_CRITICAL_FROM_ISR( uxSavedInterruptStatus );
++    }
++}
++
++static void prvHandlingTask( void *pvParameter ) {
++    (void)pvParameter;
++
++    char buffer[100] = {0};
++    uint8_t ucRxData[ 20 ];
++    size_t xReceivedBytes;
++    const TickType_t xBlockTime = pdMS_TO_TICKS( 20 );
++
++    while (1) {
++        /* Receive up to another sizeof( ucRxData ) bytes from the stream buffer.
++        Wait in the Blocked state (so not using any CPU processing time) for a
++        maximum of 100ms for the full sizeof( ucRxData ) number of bytes to be
++        available. */
++        xReceivedBytes = xStreamBufferReceive( xStreamBuffer,
++                                            ( void * ) ucRxData,
++                                            sizeof( ucRxData ),
++                                            xBlockTime );
++
++        if( xReceivedBytes > 0 ) {
++            /* A ucRxData contains another xRecievedBytes bytes of data, which can
++            be processed here.... */
++            snprintf(buffer, sizeof(buffer), "received: %s\n", (char *)ucRxData);
++            HAL_UART_Transmit(&hlpuart1, (uint8_t *)buffer, strlen(buffer), 100);
++        }
++    }
++}
++
+ int main(void) {
+ 
+     HAL_Init();
+@@ -19,6 +98,29 @@ int main(void) {
+     MX_LPUART1_UART_Init();
+     MX_USB_OTG_FS_PCD_Init();
+ 
++    NVIC_SetPriorityGrouping( 0 );
++
++    HAL_UART_Receive_IT(&hlpuart1, (uint8_t *)&ch, 1);
++
++    const size_t xStreamBufferSizeBytes = 100, xTriggerLevel = 10;
++
++    /* Create a stream buffer that can hold 100 bytes and uses the
++     * functions defined using the sbSEND_COMPLETED() and
++     * sbRECEIVE_COMPLETED() macros as send and receive completed
++     * callback functions. The memory used to hold both the stream
++     * buffer structure and the data in the stream buffer is
++     * allocated dynamically. */
++    xStreamBuffer = xStreamBufferCreate( xStreamBufferSizeBytes,
++                                         xTriggerLevel );
++    if( xStreamBuffer == NULL ) {
++        /* There was not enough heap memory space available to create the
++        stream buffer. */
++        HAL_UART_Transmit(&hlpuart1, (uint8_t *)"not enough space\n", 17, 100);
++    }
++
++    xTaskCreate(prvHandlingTask, "prvHandlingTask", 2048, NULL, tskIDLE_PRIORITY, &xHandlingTask); //snprintf uses huge stack
++    vTaskStartScheduler();
++
+     while (1) {
+     }
+ }
+@@ -132,7 +234,8 @@ static void MX_GPIO_Init(void) {
+     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+     HAL_GPIO_Init(USB_PowerSwitchOn_GPIO_Port, &GPIO_InitStruct);
+ 
+-    HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
++    HAL_NVIC_SetPriority(EXTI15_10_IRQn, configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 1, configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 1);
++    NVIC_SetPriority(EXTI15_10_IRQn, configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 1);
+     HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
+ }
+ 

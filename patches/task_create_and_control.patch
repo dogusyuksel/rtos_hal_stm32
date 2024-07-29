@@ -1,0 +1,104 @@
+diff --git a/rtos/base_example/src/main.c b/rtos/base_example/src/main.c
+index 09b0f6c..d25961e 100644
+--- a/rtos/base_example/src/main.c
++++ b/rtos/base_example/src/main.c
+@@ -1,14 +1,86 @@
+ #include "main.h"
++#include "FreeRTOS.h"
++#include "task.h"
++#include <stdio.h>
++#include <string.h>
+ 
+ UART_HandleTypeDef hlpuart1;
+-
+ PCD_HandleTypeDef hpcd_USB_OTG_FS;
+ 
++TaskHandle_t xHandleBlinkTask = NULL;
++TaskHandle_t xHandleControllerTask = NULL;
++uint8_t shouldDelete = 0, shouldSuspend = 0, shouldResume = 0;
++
+ void SystemClock_Config(void);
+ static void MX_GPIO_Init(void);
+ static void MX_LPUART1_UART_Init(void);
+ static void MX_USB_OTG_FS_PCD_Init(void);
+ 
++void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
++    if (GPIO_Pin == B1_Pin) {
++
++        HAL_GPIO_TogglePin(GPIOB, LD2_Pin);
++
++        char buffer[256] = {0};
++        static uint8_t counter = 0;
++
++        snprintf(buffer, sizeof(buffer), "counter: %d\n", counter++);
++
++        HAL_UART_Transmit(&hlpuart1, (uint8_t *)buffer, strlen(buffer), 100);
++
++        if (shouldSuspend == 0 & counter >= 10 && counter <= 20) {
++            shouldSuspend = 1;
++        }
++        if (shouldResume == 0 && counter >= 21 && counter <= 30) {
++            shouldResume = 1;
++        }
++        if (shouldDelete == 0 && counter >= 31 && counter <= 40) {
++            shouldDelete = 1;
++        }
++    }
++}
++
++void blink_function(void) { HAL_GPIO_TogglePin(GPIOB, LD3_Pin); }
++
++void blink_task(void *data) {
++    (void)data;
++    while (1) {
++        vTaskDelay(pdMS_TO_TICKS(3000));
++        blink_function();
++    }
++}
++
++void controller_task(void *data) {
++    (void)data;
++    for( ;; )
++    {
++        vTaskDelay(pdMS_TO_TICKS(1000));
++        HAL_UART_Transmit(&hlpuart1, (uint8_t *)"controller loop\n\0", 17, 100);
++
++        if (shouldSuspend == 1) {
++            if( xHandleBlinkTask != NULL ) {
++                HAL_UART_Transmit(&hlpuart1, (uint8_t *)"suspended\n\0", 11, 100);
++                vTaskSuspend(xHandleBlinkTask);
++                shouldSuspend = 2;
++            }
++        }
++        if (shouldResume == 1) {
++            if( xHandleBlinkTask != NULL ) {
++                HAL_UART_Transmit(&hlpuart1, (uint8_t *)"resumed\n\0", 9, 100);
++                vTaskResume(xHandleBlinkTask);
++                shouldResume = 2;
++            }
++        }
++        if (shouldDelete == 1) {
++            if( xHandleBlinkTask != NULL ) {
++                HAL_UART_Transmit(&hlpuart1, (uint8_t *)"deleted\n\0", 9, 100);
++                vTaskDelete(xHandleBlinkTask);
++                shouldDelete = 2;
++            }
++        }
++    }
++}
++
+ int main(void) {
+ 
+     HAL_Init();
+@@ -19,6 +91,11 @@ int main(void) {
+     MX_LPUART1_UART_Init();
+     MX_USB_OTG_FS_PCD_Init();
+ 
++    xTaskCreate(controller_task, "controller_task", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY, &xHandleControllerTask);
++    xTaskCreate(blink_task, "blink_task", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY, &xHandleBlinkTask);
++
++    vTaskStartScheduler();
++
+     while (1) {
+     }
+ }

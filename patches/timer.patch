@@ -1,0 +1,199 @@
+diff --git a/rtos/base_example/src/main.c b/rtos/base_example/src/main.c
+index 09b0f6c..fe4a4a4 100644
+--- a/rtos/base_example/src/main.c
++++ b/rtos/base_example/src/main.c
+@@ -1,14 +1,136 @@
+ #include "main.h"
++#include "FreeRTOS.h"
++#include "task.h"
++#include "timers.h"
++#include <stdio.h>
++#include <string.h>
++#include <limits.h>
++#include <stdbool.h>
+ 
+ UART_HandleTypeDef hlpuart1;
+-
+ PCD_HandleTypeDef hpcd_USB_OTG_FS;
+ 
++char ch = 0;
++
++/* An array to hold handles to the created timers. */
++TimerHandle_t xTimer;
++
+ void SystemClock_Config(void);
+ static void MX_GPIO_Init(void);
+ static void MX_LPUART1_UART_Init(void);
+ static void MX_USB_OTG_FS_PCD_Init(void);
+ 
++static TaskHandle_t xHandlingTask = NULL;
++
++void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
++    if (huart == &hlpuart1) {
++        HAL_UART_Receive_IT(&hlpuart1, (uint8_t *)&ch, 1);
++
++        if (ch == 's') {
++            HAL_UART_Transmit(&hlpuart1, (uint8_t *)"stopped\n", 8, 100);
++
++            BaseType_t xHigherPriorityTaskWoken = pdFALSE;
++
++            /* The interrupt has occurred - simply stop the timer.
++            xHigherPriorityTaskWoken was set to pdFALSE where it was defined
++            (within this function).  As this is an interrupt service routine, only
++            FreeRTOS API functions that end in "FromISR" can be used. */
++            if( xTimerStopFromISR( xTimer, &xHigherPriorityTaskWoken ) != pdPASS ) {
++                /* The stop command was not executed successfully.  Take appropriate
++                action here. */
++                HAL_UART_Transmit(&hlpuart1, (uint8_t *)"err\n", 4, 100);
++            }
++
++            /* If xHigherPriorityTaskWoken equals pdTRUE, then a context switch
++            should be performed.  The syntax required to perform a context switch
++            from inside an ISR varies from port to port, and from compiler to
++            compiler.  Inspect the demos for the port you are using to find the
++            actual syntax required. */
++            if( xHigherPriorityTaskWoken != pdFALSE ) {
++                /* Call the interrupt safe yield function here (actual function
++                depends on the FreeRTOS port being used). */
++            }
++        }
++    }
++}
++
++void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
++    UBaseType_t uxSavedInterruptStatus;
++
++    if (GPIO_Pin == B1_Pin) {
++        uxSavedInterruptStatus = taskENTER_CRITICAL_FROM_ISR();
++        HAL_UART_Transmit(&hlpuart1, (uint8_t *)"pressed\n\0", 9, 100);
++        taskEXIT_CRITICAL_FROM_ISR( uxSavedInterruptStatus );
++
++        BaseType_t xHigherPriorityTaskWoken = pdFALSE;
++
++        /* xTimerStartFromISR() or xTimerResetFromISR() could be called here
++        as both cause the timer to re-calculate its expiry time.
++        xHigherPriorityTaskWoken was initialised to pdFALSE when it was
++        declared (in this function). */
++        if( xTimerResetFromISR( xTimer,
++                                &xHigherPriorityTaskWoken ) != pdPASS )
++        {
++            /* The reset command was not executed successfully.  Take appropriate
++            action here. */
++        }
++
++        /* Perform the rest of the key processing here. */
++
++        /* If xHigherPriorityTaskWoken equals pdTRUE, then a context switch
++        should be performed.  The syntax required to perform a context switch
++        from inside an ISR varies from port to port, and from compiler to
++        compiler.  Inspect the demos for the port you are using to find the
++        actual syntax required. */
++        if( xHigherPriorityTaskWoken != pdFALSE )
++        {
++            /* Call the interrupt safe yield function here (actual function
++            depends on the FreeRTOS port being used). */
++        }
++    }
++}
++
++static void prvHandlingTask( void *pvParameter ) {
++    (void)pvParameter;
++
++    while (1) {
++        //do nothing
++         vTaskDelay(pdMS_TO_TICKS(1000));
++    }
++}
++
++/* Define a callback function that will be used by multiple timer
++ instances.  The callback function does nothing but count the number
++ of times the associated timer expires, and stop the timer once the
++ timer has expired 10 times.  The count is saved as the ID of the
++ timer. */
++ void vTimerCallback( TimerHandle_t xTimer )
++ {
++    const uint32_t ulMaxExpiryCountBeforeStopping = 10;
++    uint32_t ulCount;
++
++    /* The number of times this timer has expired is saved as the
++    timer's ID.  Obtain the count. */
++    ulCount = ( uint32_t ) pvTimerGetTimerID( xTimer );
++
++    /* Increment the count, then test to see if the timer has expired
++    ulMaxExpiryCountBeforeStopping yet. */
++    ulCount++;
++
++    /* If the timer has expired 10 times then stop it from running. */
++    if( ulCount == ulMaxExpiryCountBeforeStopping ) {
++        HAL_UART_Transmit(&hlpuart1, (uint8_t *)"expired 10 times\n", 17, 100);
++    } else {
++       /* Store the incremented count back into the timer's ID field
++       so it can be read back again the next time this software timer
++       expires. */
++       vTimerSetTimerID( xTimer, ( void * ) ulCount );
++    }
++
++    HAL_GPIO_TogglePin(GPIOB, LD2_Pin);
++    HAL_GPIO_TogglePin(GPIOB, LD3_Pin);
++ }
++
+ int main(void) {
+ 
+     HAL_Init();
+@@ -19,6 +141,46 @@ int main(void) {
+     MX_LPUART1_UART_Init();
+     MX_USB_OTG_FS_PCD_Init();
+ 
++    NVIC_SetPriorityGrouping( 0 );
++
++    HAL_UART_Receive_IT(&hlpuart1, (uint8_t *)&ch, 1);
++
++    xTimer = xTimerCreate
++            ( /* Just a text name, not used by the RTOS
++                kernel. */
++                "Timer",
++                /* The timer period in ticks, must be
++                greater than 0. */
++                pdMS_TO_TICKS( 2000 ),
++                /* The timers will auto-reload themselves
++                when they expire. */
++                pdTRUE,
++                /* The ID is used to store a count of the
++                number of times the timer has expired, which
++                is initialised to 0. */
++                ( void * ) 0,
++                /* Each timer calls the same callback when
++                it expires. */
++                vTimerCallback
++            );
++
++    if( xTimer == NULL ) {
++        /* The timer was not created. */
++    HAL_UART_Transmit(&hlpuart1, (uint8_t *)"The timer was not created\n", 26, 100);
++    } else {
++        /* Start the timer.  No block time is specified, and
++        even if one was it would be ignored because the RTOS
++        scheduler has not yet been started. */
++        if( xTimerStart( xTimer, 0 ) != pdPASS ) {
++            /* The timer could not be set into the Active
++            state. */
++        HAL_UART_Transmit(&hlpuart1, (uint8_t *)"err\n", 4, 100);
++        }
++    }
++
++    xTaskCreate(prvHandlingTask, "prvHandlingTask", 2048, NULL, tskIDLE_PRIORITY, &xHandlingTask); //snprintf uses huge stack
++    vTaskStartScheduler();
++
+     while (1) {
+     }
+ }
+@@ -132,7 +294,8 @@ static void MX_GPIO_Init(void) {
+     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+     HAL_GPIO_Init(USB_PowerSwitchOn_GPIO_Port, &GPIO_InitStruct);
+ 
+-    HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
++    HAL_NVIC_SetPriority(EXTI15_10_IRQn, configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 1, configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 1);
++    NVIC_SetPriority(EXTI15_10_IRQn, configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 1);
+     HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
+ }
+ 

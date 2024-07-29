@@ -1,0 +1,90 @@
+diff --git a/rtos/base_example/src/main.c b/rtos/base_example/src/main.c
+index 09b0f6c..bc6d3ed 100644
+--- a/rtos/base_example/src/main.c
++++ b/rtos/base_example/src/main.c
+@@ -1,7 +1,15 @@
+ #include "main.h"
++#include "FreeRTOS.h"
++#include "task.h"
++#include "queue.h"
++#include <stdio.h>
++#include <string.h>
++#include <limits.h>
++#include <stdbool.h>
+ 
+-UART_HandleTypeDef hlpuart1;
++#define QUEUE_SIZE 10
+ 
++UART_HandleTypeDef hlpuart1;
+ PCD_HandleTypeDef hpcd_USB_OTG_FS;
+ 
+ void SystemClock_Config(void);
+@@ -9,6 +17,40 @@ static void MX_GPIO_Init(void);
+ static void MX_LPUART1_UART_Init(void);
+ static void MX_USB_OTG_FS_PCD_Init(void);
+ 
++static uint32_t counter = 0;
++static QueueHandle_t xMyQueue = NULL;
++static TaskHandle_t xHandlingTask = NULL;
++
++void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
++    if (GPIO_Pin == B1_Pin) {
++        HAL_UART_Transmit(&hlpuart1, (uint8_t *)"pressed\n\0", 9, 100);
++
++        counter++;
++        if (xQueueSendToBackFromISR(xMyQueue, &counter, NULL) != pdPASS) {
++            HAL_UART_Transmit(&hlpuart1, (uint8_t *)"err\n\0", 5, 100);
++        }
++    }
++}
++
++static void prvHandlingTask( void *pvParameter ) {
++    (void)pvParameter;
++
++    BaseType_t ret_val = pdTRUE;
++    char buffer[256] = {0};
++
++    while(1) {
++        vTaskDelay(pdMS_TO_TICKS(5000));
++        do {
++            uint32_t read_data = 0;
++            if ((ret_val = xQueueReceive(xMyQueue, &read_data,
++                pdMS_TO_TICKS(20))) == pdTRUE) {
++                snprintf(buffer, sizeof(buffer), "data %ld\n", read_data);
++                HAL_UART_Transmit(&hlpuart1, (uint8_t *)buffer, strlen(buffer), 100);
++            }
++        } while (ret_val != pdFALSE);
++    }
++}
++
+ int main(void) {
+ 
+     HAL_Init();
+@@ -19,6 +61,17 @@ int main(void) {
+     MX_LPUART1_UART_Init();
+     MX_USB_OTG_FS_PCD_Init();
+ 
++    xMyQueue = xQueueCreate(QUEUE_SIZE, sizeof(__uint32_t) /*could be a struct*/);
++    if (xMyQueue == NULL ) {
++        HAL_UART_Transmit(&hlpuart1, (uint8_t *)"error\n\0", 7, 100);
++    }
++    xQueueReset(xMyQueue);
++
++    NVIC_SetPriorityGrouping( 0 );
++
++    xTaskCreate(prvHandlingTask, "prvHandlingTask", 2048, NULL, tskIDLE_PRIORITY, &xHandlingTask); //snprintf uses huge stack
++    vTaskStartScheduler();
++
+     while (1) {
+     }
+ }
+@@ -132,7 +185,8 @@ static void MX_GPIO_Init(void) {
+     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+     HAL_GPIO_Init(USB_PowerSwitchOn_GPIO_Port, &GPIO_InitStruct);
+ 
+-    HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
++    HAL_NVIC_SetPriority(EXTI15_10_IRQn, configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 1, configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 1);
++    NVIC_SetPriority(EXTI15_10_IRQn, configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 1);
+     HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
+ }
+ 

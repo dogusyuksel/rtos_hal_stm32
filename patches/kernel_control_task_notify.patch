@@ -1,0 +1,120 @@
+diff --git a/rtos/base_example/src/main.c b/rtos/base_example/src/main.c
+index 09b0f6c..232d2c1 100644
+--- a/rtos/base_example/src/main.c
++++ b/rtos/base_example/src/main.c
+@@ -1,7 +1,13 @@
+ #include "main.h"
++#include "FreeRTOS.h"
++#include "task.h"
++#include "semphr.h"
++#include <stdio.h>
++#include <string.h>
++#include <limits.h>
++#include <stdbool.h>
+ 
+ UART_HandleTypeDef hlpuart1;
+-
+ PCD_HandleTypeDef hpcd_USB_OTG_FS;
+ 
+ void SystemClock_Config(void);
+@@ -9,6 +15,72 @@ static void MX_GPIO_Init(void);
+ static void MX_LPUART1_UART_Init(void);
+ static void MX_USB_OTG_FS_PCD_Init(void);
+ 
++static uint32_t counter = 0;
++bool pressed = false;
++static SemaphoreHandle_t xMySem = NULL;
++static TaskHandle_t xHandlingTask = NULL;
++static TaskHandle_t xSendingTask = NULL;
++
++void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
++    if (GPIO_Pin == B1_Pin) {
++        BaseType_t pxHigherPriorityTaskWoken = pdFALSE;
++
++        HAL_UART_Transmit(&hlpuart1, (uint8_t *)"pressed\n\0", 9, 100);
++
++        if (xSemaphoreTakeFromISR(xMySem, &pxHigherPriorityTaskWoken) == pdPASS) {
++            pressed = true;
++
++            xSemaphoreGiveFromISR(xMySem, &pxHigherPriorityTaskWoken);
++        }
++    }
++}
++
++static void prvHandlingTask( void *pvParameter ) {
++    (void)pvParameter;
++    const TickType_t xMaxBlockTime = pdMS_TO_TICKS( 500 );
++    BaseType_t xResult = pdFAIL;
++    uint32_t ulNotifiedValue;
++    char buffer[256] = {0};
++
++    while(1) {
++        xResult = xTaskNotifyWait (
++            pdFALSE,          /* Don't clear bits on entry. */
++            0,
++            &ulNotifiedValue, /* Stores the notified value. */
++            xMaxBlockTime
++        );
++        if( xResult == pdPASS ) {
++            memset(buffer, 0, sizeof(buffer));
++            snprintf(buffer, sizeof(buffer), "value %ld\n", ulNotifiedValue);
++            HAL_UART_Transmit(&hlpuart1, (uint8_t *)buffer, strlen(buffer), 100);
++            taskYIELD();
++        }
++    }
++}
++
++static void prvSendingTask( void *pvParameter ) {
++    (void)pvParameter;
++
++    while(1) {
++        vTaskDelay(pdMS_TO_TICKS(1000));
++
++        if (xSemaphoreTake(xMySem, pdMS_TO_TICKS(20)) == pdPASS) {
++            if (pressed) {
++                pressed = false;
++                counter += 10;
++            }
++            xSemaphoreGive(xMySem);
++        }
++
++        counter++;
++        HAL_UART_Transmit(&hlpuart1, (uint8_t *)"iterated\n\0", 10, 100);
++        xTaskNotify( xHandlingTask,
++                        counter,
++                        eSetValueWithOverwrite);
++        taskYIELD();
++    }
++}
++
+ int main(void) {
+ 
+     HAL_Init();
+@@ -19,6 +91,17 @@ int main(void) {
+     MX_LPUART1_UART_Init();
+     MX_USB_OTG_FS_PCD_Init();
+ 
++    xMySem = xSemaphoreCreateMutex();
++    if (xMySem == NULL) {
++        HAL_UART_Transmit(&hlpuart1, (uint8_t *)"sem create failed\n\0", 19, 100);
++    }
++
++    NVIC_SetPriorityGrouping( 0 );
++
++    xTaskCreate(prvHandlingTask, "prvHandlingTask", 2048, NULL, tskIDLE_PRIORITY, &xHandlingTask); //snprintf uses huge stack
++    xTaskCreate(prvSendingTask, "prvSendingTask", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY, &xSendingTask);
++    vTaskStartScheduler();
++
+     while (1) {
+     }
+ }
+@@ -132,7 +215,8 @@ static void MX_GPIO_Init(void) {
+     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+     HAL_GPIO_Init(USB_PowerSwitchOn_GPIO_Port, &GPIO_InitStruct);
+ 
+-    HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
++    HAL_NVIC_SetPriority(EXTI15_10_IRQn, configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 1, configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 1);
++    NVIC_SetPriority(EXTI15_10_IRQn, configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 1);
+     HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
+ }
+ 

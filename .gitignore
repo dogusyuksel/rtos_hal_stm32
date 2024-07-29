@@ -1,0 +1,79 @@
+.vscode
+*.lock
+*.sock
+*.exe
+*.orig
+*.rej
+python/*/__pycache__/
+**/CMakeFiles
+**/CMakeCache.txt
+**/cmake_install.cmake
+**/cjson
+compile_commands.json
+thirdparty/FreeRTOS/
+thirdparty/FreeRTOS-Kernel/
+thirdparty/CMSIS_5/
+thirdparty/STM32L4XX_HAL/
+thirdparty/cmsis-header-stm32/
+rtos/base_example/src/main.c
+rtos/*/*.bin
+rtos/build/pyshtables.py
+rtos/build/__pycache__
+rtos/build/bin
+
+*.log
+**/cache/**
+**/tmp/**
+
+# Prerequisites
+*.d
+
+# Object files
+*.o
+*.ko
+*.obj
+*.elf
+
+# Linker output
+*.ilk
+*.map
+*.exp
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Libraries
+*.lib
+*.a
+*.la
+*.lo
+
+# Shared objects (inc. Windows DLLs)
+*.dll
+*.so
+*.so.*
+*.dylib
+
+# Executables
+*.exe
+*.out
+*.app
+*.i*86
+*.x86_64
+*.hex
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# Kernel Module Compile Results
+*.mod*
+*.cmd
+.tmp_versions/
+modules.order
+Module.symvers
+Mkfile.old
+dkms.conf
