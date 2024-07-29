@@ -2,17 +2,14 @@ addtask build
 addtask clean
 
 SRC_URI =  "\
-    file:///workspace/rtos/base_example/src \
+    file:///workspace/base_example/src \
     file:///workspace/thirdparty/STM32L4XX_HAL/Src \
     file:///workspace/thirdparty/STM32L4A6ZGT \
     "
 
-TOOLCHAIN_PATH = "/workspace/thirdparty/STM32L4A6ZGT/gcc-arm-none-eabi.cmake"
+SOURCE_FILES_PATH = "/workspace/base_example/src"
 
-SOURCE_FILES_PATH = "/workspace/rtos/base_example/src"
-STARTUP_FILES_PATH = "/workspace/thirdparty/STM32L4A6ZGT"
-
-INCLUDES_PATHS = "/workspace/rtos/base_example/inc:/workspace/thirdparty/STM32L4XX_HAL/Inc:/workspace/thirdparty/STM32L4XX_HAL/Inc/Legacy:/workspace/thirdparty/CMSIS_5/CMSIS/Core/Include:/workspace/thirdparty/cmsis-header-stm32/stm32l4xx/Include"
+INCLUDES_PATHS = "/workspace/base_example/inc:/workspace/thirdparty/STM32L4XX_HAL/Inc:/workspace/thirdparty/STM32L4XX_HAL/Inc/Legacy:/workspace/thirdparty/CMSIS_5/CMSIS/Core/Include:/workspace/thirdparty/cmsis-header-stm32/stm32l4xx/Include"
 
 do_apply_patch () {
     cd /workspace && git apply ${PATCH_FILE} && cd -
@@ -24,10 +21,8 @@ do_revert_patch () {
 
 do_build () {
     echo "Building..."
-    cmake /workspace/rtos/base_example \
-     -DTOOLCHAIN_PATH=${TOOLCHAIN_PATH} \
+    cmake /workspace/base_example \
      -DSOURCE_FILES_PATH=${SOURCE_FILES_PATH} \
-     -DSTARTUP_FILES_PATH=${STARTUP_FILES_PATH} \
      -DINCLUDES_PATHS=${INCLUDES_PATHS} \
      -DNAME=${NAME} -DVER=${PV}
     make

@@ -6,4 +6,4 @@ PV = "1.0.0"
 PR = "basic"
 NAME = "STREAMBUFFER"
 
-PATCH_FILE = "/workspace/rtos/patches/stream_buffer.patch"
+PATCH_FILE = "/workspace/patches/stream_buffer.patch"

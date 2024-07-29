@@ -6,4 +6,4 @@ PV = "1.0.0"
 PR = "basic"
 NAME = "QSET_AND_SEMAPHORE"
 
-PATCH_FILE = "/workspace/rtos/patches/qset_semaphore.patch"
+PATCH_FILE = "/workspace/patches/qset_semaphore.patch"

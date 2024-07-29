@@ -15,8 +15,8 @@ endif()
 set(CMAKE_PROJECT_NAME "${NAME}-${VER}")
 
 # Include toolchain file
-include(${TOOLCHAIN_PATH})
-message("TOOLCHAIN_PATH:         " ${TOOLCHAIN_PATH})
+include("gcc-arm-none-eabi.cmake")
+set(CMAKE_C_LINK_FLAGS "${CMAKE_C_LINK_FLAGS} -T \"STM32L4A6ZGTx_FLASH.ld\"")
 
 # Enable compile command to ease indexing with e.g. clangd
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
@@ -38,12 +38,6 @@ file(GLOB files_under_src
      "${SOURCE_FILES_PATH}/*.c"
 )
 message("files_under_src:        " ${files_under_src})
-
-message("STARTUP_FILES_PATH:     " ${STARTUP_FILES_PATH})
-file(GLOB files_startup
-     "${STARTUP_FILES_PATH}/*.s"
-)
-message("files_startup:          " ${files_startup})
 
 file(GLOB free_rtos_all
      "../../thirdparty/FreeRTOS-Kernel/*.c"
@@ -73,7 +67,7 @@ add_executable(${CMAKE_PROJECT_NAME}
     ../../thirdparty/STM32L4XX_HAL/Src/stm32l4xx_hal_pcd_ex.c
     ../../thirdparty/STM32L4XX_HAL/Src/stm32l4xx_ll_usb.c
     ${files_under_src}
-    ${files_startup}
+    startup_stm32l4a6xx.s
     ${free_rtos_all}
     ../../thirdparty/FreeRTOS-Kernel/portable/GCC/ARM_CM4F/port.c
     ../../thirdparty/FreeRTOS-Kernel/portable/MemMang/heap_3.c

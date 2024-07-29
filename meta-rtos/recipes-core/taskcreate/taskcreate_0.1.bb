@@ -6,4 +6,4 @@ PV = "1.0.0"
 PR = "basic"
 NAME = "TASK_CREATE"
 
-PATCH_FILE = "/workspace/rtos/patches/task_create_and_control.patch"
+PATCH_FILE = "/workspace/patches/task_create_and_control.patch"
