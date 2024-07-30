@@ -6,4 +6,4 @@ PV = "1.0.0"
 PR = "basic"
 NAME = "QUEUE_IN_ISR"
 
-PATCH_FILE = "/workspace/rtos/patches/queue_isr.patch"
+PATCH_FILE = "/workspace/patches/queue_isr.patch"

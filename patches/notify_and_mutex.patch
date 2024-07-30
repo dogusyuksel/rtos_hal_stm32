@@ -1,7 +1,7 @@
-diff --git a/rtos/base_example/src/main.c b/rtos/base_example/src/main.c
+diff --git a/base_example/src/main.c b/base_example/src/main.c
 index 09b0f6c..232d2c1 100644
---- a/rtos/base_example/src/main.c
-+++ b/rtos/base_example/src/main.c
+--- a/base_example/src/main.c
++++ b/base_example/src/main.c
 @@ -1,7 +1,13 @@
  #include "main.h"
 +#include "FreeRTOS.h"

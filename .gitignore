@@ -20,6 +20,9 @@ rtos/*/*.bin
 rtos/build/pyshtables.py
 rtos/build/__pycache__
 rtos/build/bin
+build/Makefile
+build/__pycache__/*
+build/pyshtables.py
 
 *.log
 **/cache/**

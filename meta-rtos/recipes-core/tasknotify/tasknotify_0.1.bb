@@ -6,4 +6,4 @@ PV = "1.0.0"
 PR = "basic"
 NAME = "TASK_NOTIFY"
 
-PATCH_FILE = "/workspace/rtos/patches/kernel_control_task_notify.patch"
+PATCH_FILE = "/workspace/patches/kernel_control_task_notify.patch"

@@ -6,4 +6,4 @@ PV = "1.0.0"
 PR = "basic"
 NAME = "MUTEX"
 
-PATCH_FILE = "/workspace/rtos/patches/notify_and_mutex.patch"
+PATCH_FILE = "/workspace/patches/notify_and_mutex.patch"

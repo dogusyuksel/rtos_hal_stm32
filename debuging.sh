@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #this cannot be used inside docker
-openocd -f ../thirdparty/STM32L452RET/st_nucleo_l4.cfg
+openocd -f ./thirdparty/STM32L452RET/st_nucleo_l4.cfg
 
 # then in another terminal (or even in docker), run below
 # gdb-multiarch $1/build/$1.elf
