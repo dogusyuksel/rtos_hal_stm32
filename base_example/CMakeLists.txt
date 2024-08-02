@@ -16,7 +16,8 @@ set(CMAKE_PROJECT_NAME "${NAME}-${VER}")
 
 # Include toolchain file
 include("../gcc-arm-none-eabi.cmake")
-set(CMAKE_C_LINK_FLAGS "${CMAKE_C_LINK_FLAGS} -T \"../STM32L4A6ZGTx_FLASH.ld\"")
+message("LINKER_FILE     :       " ${LINKER_FILE})
+set(CMAKE_C_LINK_FLAGS "${CMAKE_C_LINK_FLAGS} -T \"${LINKER_FILE}\"")
 
 # Enable compile command to ease indexing with e.g. clangd
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
