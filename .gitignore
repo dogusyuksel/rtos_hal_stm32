@@ -23,6 +23,7 @@ rtos/build/bin
 build/Makefile
 build/__pycache__/*
 build/pyshtables.py
+base_example/build
 
 *.log
 **/cache/**

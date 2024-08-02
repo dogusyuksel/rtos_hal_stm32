@@ -40,6 +40,10 @@ jobs:
         push: false
         provenance: false
 
-    - name: rtos Build Check
+    - name: rtos bitbake Build Check
       run: |
         ./docker/run_docker.sh ${{ secrets.DOCKER_REPO }}:master "cd /workspace/build && ./build_all.sh"
+
+    - name: rtos local Build Check
+      run: |
+        ./docker/run_docker.sh ${{ secrets.DOCKER_REPO }}:master "cd /workspace && ./bake.sh base_example clean build"
