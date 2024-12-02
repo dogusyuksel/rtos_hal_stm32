@@ -17,7 +17,7 @@ jobs:
 
     - uses: actions/checkout@v4
       with:
-        github-server-url: https://github.com/dogusyuksel/embedded_docker
+        github-server-url: https://github.com/dogusyuksel/embedded_docker.git
         lfs: true
         path: docker
     
