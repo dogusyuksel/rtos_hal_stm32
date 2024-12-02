@@ -10,6 +10,13 @@ jobs:
   rtos-build-job:
     runs-on: ubuntu-latest
     steps:
+    - name: Remove unnecessary files
+      run: |
+        df . -h
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+        df . -h
+
     - uses: actions/checkout@v4
       with:
         github-server-url: https://github.com/dogusyuksel/rtos_hal_stm32
