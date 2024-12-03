@@ -3,13 +3,12 @@ addtask clean
 
 SRC_URI =  "\
     file:///workspace/base_example/src \
-    file:///workspace/thirdparty/STM32L4XX_HAL/Src \
-    file:///workspace/thirdparty/STM32L4A6ZGT \
+    file:///thirdparty/STM32L4XX_HAL/Src \
     "
 
 SOURCE_FILES_PATH = "/workspace/base_example/src"
 LINKER_FILE = "../STM32L4A6ZGTx_FLASH.ld"
-INCLUDES_PATHS = "/workspace/base_example/inc:/workspace/thirdparty/STM32L4XX_HAL/Inc:/workspace/thirdparty/STM32L4XX_HAL/Inc/Legacy:/workspace/thirdparty/CMSIS_5/CMSIS/Core/Include:/workspace/thirdparty/cmsis-header-stm32/stm32l4xx/Include"
+INCLUDES_PATHS = "/workspace/base_example/inc:/thirdparty/STM32L4XX_HAL/Inc:/thirdparty/STM32L4XX_HAL/Inc/Legacy:/thirdparty/CMSIS_5/CMSIS/Core/Include:/thirdparty/cmsis-header-stm32/stm32l4xx/Include"
 
 do_apply_patch () {
     cd /workspace && git apply ${PATCH_FILE} && cd -

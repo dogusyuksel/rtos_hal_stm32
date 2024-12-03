@@ -10,11 +10,7 @@ python/*/__pycache__/
 **/cmake_install.cmake
 **/cjson
 compile_commands.json
-thirdparty/FreeRTOS/
-thirdparty/FreeRTOS-Kernel/
-thirdparty/CMSIS_5/
-thirdparty/STM32L4XX_HAL/
-thirdparty/cmsis-header-stm32/
+docker
 rtos/base_example/src/main.c
 rtos/*/*.bin
 rtos/build/pyshtables.py
