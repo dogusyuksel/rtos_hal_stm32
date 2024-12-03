@@ -10,13 +10,6 @@ jobs:
   rtos-build-job:
     runs-on: ubuntu-latest
     steps:
-    - name: Remove unnecessary files
-      run: |
-        df . -h
-        sudo rm -rf /usr/share/dotnet
-        sudo rm -rf "$AGENT_TOOLSDIRECTORY"
-        df . -h
-
     - uses: actions/checkout@v4
       with:
         github-server-url: https://github.com/dogusyuksel/rtos_hal_stm32
@@ -26,6 +19,10 @@ jobs:
       run: |
         git clone https://github.com/dogusyuksel/embedded_docker.git docker
         cp -rf docker/* .
+
+    - name: Remove unnecessary files
+      run: |
+        ./free_space.sh
 
     - name: Login to Docker Hub
       uses: docker/login-action@v3
@@ -50,4 +47,4 @@ jobs:
 
     - name: rtos bitbake Build Check
       run: |
-        ./run_docker.sh ${{ secrets.DOCKER_REPO }}:master "cd /workspace/build && ./build_all.sh"
+        ./docker/run_docker.sh ${{ secrets.DOCKER_REPO }}:master "cd /workspace/build && ./build_all.sh"

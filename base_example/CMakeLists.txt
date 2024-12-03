@@ -41,37 +41,37 @@ file(GLOB files_under_src
 message("files_under_src:        " ${files_under_src})
 
 file(GLOB free_rtos_all
-     "../thirdparty/FreeRTOS-Kernel/*.c"
+     "/thirdparty/FreeRTOS-Kernel/*.c"
 )
 
 add_executable(${CMAKE_PROJECT_NAME}
-    ../thirdparty/STM32L4XX_HAL/Src/stm32l4xx_hal_uart.c
-    ../thirdparty/STM32L4XX_HAL/Src/stm32l4xx_hal_uart_ex.c
-    ../thirdparty/STM32L4XX_HAL/Src/stm32l4xx_hal.c
-    ../thirdparty/STM32L4XX_HAL/Src/stm32l4xx_hal_rcc.c
-    ../thirdparty/STM32L4XX_HAL/Src/stm32l4xx_hal_rcc_ex.c
-    ../thirdparty/STM32L4XX_HAL/Src/stm32l4xx_hal_flash.c
-    ../thirdparty/STM32L4XX_HAL/Src/stm32l4xx_hal_flash_ex.c
-    ../thirdparty/STM32L4XX_HAL/Src/stm32l4xx_hal_flash_ramfunc.c
-    ../thirdparty/STM32L4XX_HAL/Src/stm32l4xx_hal_gpio.c
-    ../thirdparty/STM32L4XX_HAL/Src/stm32l4xx_hal_i2c.c
-    ../thirdparty/STM32L4XX_HAL/Src/stm32l4xx_hal_i2c_ex.c
-    ../thirdparty/STM32L4XX_HAL/Src/stm32l4xx_hal_dma.c
-    ../thirdparty/STM32L4XX_HAL/Src/stm32l4xx_hal_dma_ex.c
-    ../thirdparty/STM32L4XX_HAL/Src/stm32l4xx_hal_pwr.c
-    ../thirdparty/STM32L4XX_HAL/Src/stm32l4xx_hal_pwr_ex.c
-    ../thirdparty/STM32L4XX_HAL/Src/stm32l4xx_hal_cortex.c
-    ../thirdparty/STM32L4XX_HAL/Src/stm32l4xx_hal_exti.c
-    ../thirdparty/STM32L4XX_HAL/Src/stm32l4xx_hal_tim.c
-    ../thirdparty/STM32L4XX_HAL/Src/stm32l4xx_hal_tim_ex.c
-    ../thirdparty/STM32L4XX_HAL/Src/stm32l4xx_hal_pcd.c
-    ../thirdparty/STM32L4XX_HAL/Src/stm32l4xx_hal_pcd_ex.c
-    ../thirdparty/STM32L4XX_HAL/Src/stm32l4xx_ll_usb.c
+    /thirdparty/STM32L4XX_HAL/Src/stm32l4xx_hal_uart.c
+    /thirdparty/STM32L4XX_HAL/Src/stm32l4xx_hal_uart_ex.c
+    /thirdparty/STM32L4XX_HAL/Src/stm32l4xx_hal.c
+    /thirdparty/STM32L4XX_HAL/Src/stm32l4xx_hal_rcc.c
+    /thirdparty/STM32L4XX_HAL/Src/stm32l4xx_hal_rcc_ex.c
+    /thirdparty/STM32L4XX_HAL/Src/stm32l4xx_hal_flash.c
+    /thirdparty/STM32L4XX_HAL/Src/stm32l4xx_hal_flash_ex.c
+    /thirdparty/STM32L4XX_HAL/Src/stm32l4xx_hal_flash_ramfunc.c
+    /thirdparty/STM32L4XX_HAL/Src/stm32l4xx_hal_gpio.c
+    /thirdparty/STM32L4XX_HAL/Src/stm32l4xx_hal_i2c.c
+    /thirdparty/STM32L4XX_HAL/Src/stm32l4xx_hal_i2c_ex.c
+    /thirdparty/STM32L4XX_HAL/Src/stm32l4xx_hal_dma.c
+    /thirdparty/STM32L4XX_HAL/Src/stm32l4xx_hal_dma_ex.c
+    /thirdparty/STM32L4XX_HAL/Src/stm32l4xx_hal_pwr.c
+    /thirdparty/STM32L4XX_HAL/Src/stm32l4xx_hal_pwr_ex.c
+    /thirdparty/STM32L4XX_HAL/Src/stm32l4xx_hal_cortex.c
+    /thirdparty/STM32L4XX_HAL/Src/stm32l4xx_hal_exti.c
+    /thirdparty/STM32L4XX_HAL/Src/stm32l4xx_hal_tim.c
+    /thirdparty/STM32L4XX_HAL/Src/stm32l4xx_hal_tim_ex.c
+    /thirdparty/STM32L4XX_HAL/Src/stm32l4xx_hal_pcd.c
+    /thirdparty/STM32L4XX_HAL/Src/stm32l4xx_hal_pcd_ex.c
+    /thirdparty/STM32L4XX_HAL/Src/stm32l4xx_ll_usb.c
     ${files_under_src}
     ../startup_stm32l4a6xx.s
     ${free_rtos_all}
-    ../thirdparty/FreeRTOS-Kernel/portable/GCC/ARM_CM4F/port.c
-    ../thirdparty/FreeRTOS-Kernel/portable/MemMang/heap_3.c
+    /thirdparty/FreeRTOS-Kernel/portable/GCC/ARM_CM4F/port.c
+    /thirdparty/FreeRTOS-Kernel/portable/MemMang/heap_3.c
 )
 
 message("INCLUDES_PATHS:         " ${INCLUDES_PATHS})
@@ -81,8 +81,8 @@ foreach(file ${INCLUDES_PATHS_EDITED})
 endforeach()
 target_include_directories(${CMAKE_PROJECT_NAME} PUBLIC SYSTEM
     ${INCLUDES_PATHS_EDITED}
-    ../thirdparty/FreeRTOS-Kernel/include
-    ../thirdparty/FreeRTOS-Kernel/portable/GCC/ARM_CM4F
+    /thirdparty/FreeRTOS-Kernel/include
+    /thirdparty/FreeRTOS-Kernel/portable/GCC/ARM_CM4F
 )
 
 target_compile_definitions(${CMAKE_PROJECT_NAME} PUBLIC SYSTEM
