@@ -1,14 +1,16 @@
 addtask build
 addtask clean
 
+THIRDPARTY ?= "/thirdparty"
+
 SRC_URI =  "\
     file:///workspace/base_example/src \
-    file:///thirdparty/STM32L4XX_HAL/Src \
+    file://${THIRDPARTY}/STM32L4XX_HAL/Src \
     "
 
 SOURCE_FILES_PATH = "/workspace/base_example/src"
 LINKER_FILE = "../STM32L4A6ZGTx_FLASH.ld"
-INCLUDES_PATHS = "/workspace/base_example/inc:/thirdparty/STM32L4XX_HAL/Inc:/thirdparty/STM32L4XX_HAL/Inc/Legacy:/thirdparty/CMSIS_5/CMSIS/Core/Include:/thirdparty/cmsis-header-stm32/stm32l4xx/Include"
+INCLUDES_PATHS = "/workspace/base_example/inc:${THIRDPARTY}/STM32L4XX_HAL/Inc:${THIRDPARTY}/STM32L4XX_HAL/Inc/Legacy:${THIRDPARTY}/CMSIS_5/CMSIS/Core/Include:${THIRDPARTY}/cmsis-header-stm32/stm32l4xx/Include"
 
 do_apply_patch () {
     cd /workspace && git apply ${PATCH_FILE} && cd -
@@ -20,7 +22,9 @@ do_revert_patch () {
 
 do_build () {
     echo "Building..."
+    echo "THIRDPARTY from env = $THIRDPARTY"
     cmake /workspace/base_example \
+     -DTHIRDPARTY_PATH=${THIRDPARTY} \
      -DSOURCE_FILES_PATH=${SOURCE_FILES_PATH} \
      -DINCLUDES_PATHS=${INCLUDES_PATHS} \
      -DNAME=${NAME} -DVER=${PV} \
