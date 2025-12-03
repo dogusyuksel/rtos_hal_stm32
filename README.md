@@ -1,6 +1,8 @@
 # SOME NOTES
 ------------------------
 
+This repo has almost all and popular FreeRTOS examples/functions/usages and compile them in yocto environment just for fun!
+
 ## While Debugging
 
 check this link: https://www.youtube.com/watch?v=_1u7IOnivnM
